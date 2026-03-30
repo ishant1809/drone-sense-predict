@@ -21,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/simulation" element={<Simulation />} />
+          <Route path="/simulation/landslide-prediction" element={<LandslidePrediction />} />
           <Route path="/simulation/:module" element={<ModulePlaceholder />} />
           <Route path="/prototype" element={<Prototype />} />
           <Route path="*" element={<NotFound />} />
