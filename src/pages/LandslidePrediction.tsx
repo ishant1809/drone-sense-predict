@@ -376,8 +376,9 @@ const LandslidePrediction = () => {
                         width="100%"
                         height="100%"
                         style={{ border: 0, borderRadius: "0 0 8px 8px" }}
-                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter[1] - 0.02}%2C${mapCenter[0] - 0.015}%2C${mapCenter[1] + 0.02}%2C${mapCenter[0] + 0.015}&layer=mapnik&marker=${mapCenter[0]}%2C${mapCenter[1]}`}
+                        src={`https://maps.google.com/maps?q=${mapCenter[0]},${mapCenter[1]}&t=p&z=14&output=embed`}
                         loading="lazy"
+                        allowFullScreen
                       />
                       <div className="absolute bottom-2 left-2 bg-card/80 backdrop-blur-sm rounded px-2 py-1 text-xs text-muted-foreground">
                         📍 {mapCenter[0].toFixed(4)}, {mapCenter[1].toFixed(4)}
