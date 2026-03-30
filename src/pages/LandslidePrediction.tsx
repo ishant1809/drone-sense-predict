@@ -33,8 +33,6 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 
 interface ZoneManifest {
   id: string;
