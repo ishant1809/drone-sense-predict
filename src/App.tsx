@@ -7,6 +7,7 @@ import Index from "./pages/Index.tsx";
 import Simulation from "./pages/Simulation.tsx";
 import Prototype from "./pages/Prototype.tsx";
 import ModulePlaceholder from "./pages/ModulePlaceholder.tsx";
+import LandslidePrediction from "./pages/LandslidePrediction.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/simulation" element={<Simulation />} />
+          <Route path="/simulation/landslide-prediction" element={<LandslidePrediction />} />
           <Route path="/simulation/:module" element={<ModulePlaceholder />} />
           <Route path="/prototype" element={<Prototype />} />
           <Route path="*" element={<NotFound />} />
