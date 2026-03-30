@@ -198,7 +198,7 @@ const LandslidePrediction = () => {
                           {zone.name}
                         </CardTitle>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {zone.folder}/predictions.csv
+                          Terrain & risk prediction dataset
                         </p>
                       </div>
                     </div>
