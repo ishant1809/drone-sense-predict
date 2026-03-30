@@ -369,42 +369,19 @@ const LandslidePrediction = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="h-[350px] w-full">
-                      <MapContainer
-                        center={mapCenter}
-                        zoom={14}
-                        scrollWheelZoom={true}
-                        style={{ height: "100%", width: "100%" }}
+                    <div className="h-[350px] w-full relative">
+                      <iframe
                         key={`${mapCenter[0]}-${mapCenter[1]}`}
-                      >
-                        <TileLayer
-                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        {data.map((row, i) => (
-                          <CircleMarker
-                            key={i}
-                            center={[row.lat, row.lon]}
-                            radius={8}
-                            pathOptions={{
-                              fillColor: riskColor(row.risk_percent),
-                              color: riskColor(row.risk_percent),
-                              fillOpacity: 0.7,
-                              weight: 2,
-                            }}
-                          >
-                            <Popup>
-                              <div className="text-xs">
-                                <strong>{row.image}</strong>
-                                <br />
-                                Risk: {row.risk_percent.toFixed(1)}%
-                                <br />
-                                Slope: {row.slope}° | Soil: {row.soil_score}
-                              </div>
-                            </Popup>
-                          </CircleMarker>
-                        ))}
-                      </MapContainer>
+                        title="Zone Map"
+                        width="100%"
+                        height="100%"
+                        style={{ border: 0, borderRadius: "0 0 8px 8px" }}
+                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter[1] - 0.02}%2C${mapCenter[0] - 0.015}%2C${mapCenter[1] + 0.02}%2C${mapCenter[0] + 0.015}&layer=mapnik&marker=${mapCenter[0]}%2C${mapCenter[1]}`}
+                        loading="lazy"
+                      />
+                      <div className="absolute bottom-2 left-2 bg-card/80 backdrop-blur-sm rounded px-2 py-1 text-xs text-muted-foreground">
+                        📍 {mapCenter[0].toFixed(4)}, {mapCenter[1].toFixed(4)}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
