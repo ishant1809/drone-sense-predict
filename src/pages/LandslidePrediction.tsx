@@ -115,7 +115,7 @@ const LandslidePrediction = () => {
   const stats = useMemo(() => {
     if (!data.length) return null;
     const avg = (key: keyof PredictionRow) =>
-      data.reduce((s, r) => s + Number(r[key]), 0) / data.length;
+      data.reduce((s, r) => s + (Number(r[key]) || 0), 0) / data.length;
     return {
       avgRisk: avg("risk_percent"),
       avgSoilMoisture: avg("soil_moisture"),
