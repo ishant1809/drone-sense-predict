@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Papa from "papaparse";
 import {
-  ArrowLeft, Mountain, Droplets, Layers, TreePine, AlertTriangle, MapPin, Activity, Database,
+  ArrowLeft, Waves, Droplets, MapPin, Activity, Database, Ruler, TrendingUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
@@ -18,51 +21,44 @@ interface ZoneManifest {
   folder: string;
 }
 
-interface PredictionRow {
-  image: string;
+interface FloodRow {
   lat: number;
-  lon: number;
-  rain_day1: number;
-  rain_day2: number;
-  rain_day3: number;
-  rain_day4: number;
-  rain_day5: number;
-  rain_day6: number;
-  rain_day7: number;
+  long: number;
+  elevation: number;
+  distance_from_river: number;
+  rain_day_1: number;
+  rain_day_2: number;
+  rain_day_3: number;
+  rain_day_4: number;
+  rain_day_5: number;
+  rain_day_6: number;
+  rain_day_7: number;
+  river_level_day_1: number;
+  river_level_day_2: number;
+  river_level_day_3: number;
+  river_level_day_4: number;
+  river_level_day_5: number;
+  river_level_day_6: number;
+  river_level_day_7: number;
+  river_trend: string;
   soil_moisture: number;
-  slope: number;
-  soil_score: number;
-  river_distance: number;
-  vegetation: number;
-  crack: number;
-  risk: number;
-  risk_percent: number;
+  water_spread_trend: number;
+  flood_next_day: number;
 }
 
-const riskColor = (pct: number) => {
-  if (pct >= 75) return "hsl(0, 85%, 55%)";
-  if (pct >= 50) return "hsl(35, 90%, 55%)";
-  if (pct >= 25) return "hsl(50, 90%, 55%)";
-  return "hsl(150, 70%, 45%)";
-};
+const floodLabel = (v: number) => (v === 1 ? "Flood Likely" : "Safe");
+const floodColor = (v: number) => (v === 1 ? "hsl(0, 85%, 55%)" : "hsl(150, 70%, 45%)");
 
-const riskLabel = (pct: number) => {
-  if (pct >= 75) return "Critical";
-  if (pct >= 50) return "High";
-  if (pct >= 25) return "Moderate";
-  return "Low";
-};
-
-const LandslidePrediction = () => {
+const FloodPrediction = () => {
   const navigate = useNavigate();
   const [zones, setZones] = useState<ZoneManifest[]>([]);
   const [selectedZone, setSelectedZone] = useState<ZoneManifest | null>(null);
-  const [data, setData] = useState<PredictionRow[]>([]);
+  const [data, setData] = useState<FloodRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewImages, setPreviewImages] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch("/data/landslide/manifest.json")
+    fetch("/data/flood/manifest.json")
       .then((r) => r.json())
       .then(setZones)
       .catch(console.error);
@@ -72,19 +68,19 @@ const LandslidePrediction = () => {
     setLoading(true);
     try {
       const [csvRes, imgRes] = await Promise.all([
-        fetch(`/data/landslide/${zone.folder}/predictions.csv`),
-        fetch(`/data/landslide/${zone.folder}/image-manifest.json`).catch(() => null),
+        fetch(`/data/flood/${zone.folder}/predictions.csv`),
+        fetch(`/data/flood/${zone.folder}/image-manifest.json`).catch(() => null),
       ]);
 
       if (csvRes.ok) {
         const text = await csvRes.text();
-        const parsed = Papa.parse<PredictionRow>(text, {
+        const parsed = Papa.parse<FloodRow>(text, {
           header: true, dynamicTyping: true, skipEmptyLines: true,
         });
-        const validData = parsed.data.filter(
-          (r) => r.risk_percent != null && Number.isFinite(Number(r.risk_percent)) && r.lat != null && r.lon != null
+        const valid = parsed.data.filter(
+          (r) => r.lat != null && r.long != null && r.flood_next_day != null
         );
-        setData(validData);
+        setData(valid);
       }
 
       if (imgRes && imgRes.ok) {
@@ -95,49 +91,49 @@ const LandslidePrediction = () => {
 
       setSelectedZone(zone);
     } catch (e) {
-      console.error("Failed to load zone data", e);
+      console.error("Failed to load flood zone", e);
     }
     setLoading(false);
   };
 
   const stats = useMemo(() => {
     if (!data.length) return null;
-    const avg = (key: keyof PredictionRow) =>
+    const avg = (key: keyof FloodRow) =>
       data.reduce((s, r) => s + (Number(r[key]) || 0), 0) / data.length;
+    const floodCount = data.filter((r) => r.flood_next_day === 1).length;
     return {
-      avgRisk: avg("risk_percent"),
+      avgElevation: avg("elevation"),
+      avgRiverDist: avg("distance_from_river"),
       avgSoilMoisture: avg("soil_moisture"),
-      avgSlope: avg("slope"),
-      avgSoilScore: avg("soil_score"),
-      avgRiverDist: avg("river_distance"),
-      avgVegetation: avg("vegetation"),
-      avgCrack: avg("crack"),
+      avgWaterSpread: avg("water_spread_trend"),
+      floodCount,
+      safeCount: data.length - floodCount,
     };
   }, [data]);
 
   const rainfallData = useMemo(() => {
     if (!data.length) return [];
-    const avg = (key: keyof PredictionRow) =>
+    const avg = (key: keyof FloodRow) =>
       data.reduce((s, r) => s + (Number(r[key]) || 0), 0) / data.length;
     return [
-      { day: "Day 1", rainfall: avg("rain_day1") },
-      { day: "Day 2", rainfall: avg("rain_day2") },
-      { day: "Day 3", rainfall: avg("rain_day3") },
-      { day: "Day 4", rainfall: avg("rain_day4") },
-      { day: "Day 5", rainfall: avg("rain_day5") },
-      { day: "Day 6", rainfall: avg("rain_day6") },
-      { day: "Day 7", rainfall: avg("rain_day7") },
+      { day: "Day 1", rainfall: avg("rain_day_1") },
+      { day: "Day 2", rainfall: avg("rain_day_2") },
+      { day: "Day 3", rainfall: avg("rain_day_3") },
+      { day: "Day 4", rainfall: avg("rain_day_4") },
+      { day: "Day 5", rainfall: avg("rain_day_5") },
+      { day: "Day 6", rainfall: avg("rain_day_6") },
+      { day: "Day 7", rainfall: avg("rain_day_7") },
     ];
   }, [data]);
 
   const mapCenter = useMemo((): [number, number] => {
-    if (!data.length) return [30.0757, 78.5206];
+    if (!data.length) return [23.45, 87.12];
     const avgLat = data.reduce((s, r) => s + r.lat, 0) / data.length;
-    const avgLon = data.reduce((s, r) => s + r.lon, 0) / data.length;
+    const avgLon = data.reduce((s, r) => s + r.long, 0) / data.length;
     return [avgLat, avgLon];
   }, [data]);
 
-  // Dataset selection view
+  // Zone selection view
   if (!selectedZone) {
     return (
       <div className="min-h-screen bg-background text-foreground">
@@ -147,11 +143,11 @@ const LandslidePrediction = () => {
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Simulation
             </Button>
             <div className="flex items-center gap-3 mb-2">
-              <Mountain className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-bold font-orbitron tracking-wider">Landslide Prediction</h1>
+              <Waves className="h-8 w-8 text-primary" />
+              <h1 className="text-3xl font-bold font-orbitron tracking-wider">Flood Prediction</h1>
             </div>
             <p className="text-muted-foreground max-w-2xl">
-              Select a zone dataset to analyze terrain data, rainfall patterns, and predicted landslide risk levels.
+              Select a zone dataset to analyze rainfall, river levels, and flood risk.
             </p>
           </motion.div>
 
@@ -169,26 +165,17 @@ const LandslidePrediction = () => {
                       </div>
                       <div>
                         <CardTitle className="text-lg font-orbitron">{zone.name}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">Terrain & risk prediction dataset</p>
+                        <p className="text-xs text-muted-foreground mt-1">Flood prediction dataset</p>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Click to load terrain analysis and risk predictions for this zone.
-                    </p>
+                    <p className="text-sm text-muted-foreground">Click to load flood analysis for this zone.</p>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
           </div>
-
-          {zones.length === 0 && (
-            <div className="text-center py-20 text-muted-foreground">
-              <Mountain className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Loading available datasets...</p>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -198,7 +185,6 @@ const LandslidePrediction = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto px-4 py-6">
-        {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <Button
             variant="ghost"
@@ -208,25 +194,25 @@ const LandslidePrediction = () => {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Datasets
           </Button>
           <div className="flex items-center gap-3 flex-wrap">
-            <Mountain className="h-7 w-7 text-primary" />
+            <Waves className="h-7 w-7 text-primary" />
             <h1 className="text-2xl font-bold font-orbitron tracking-wider">
-              {selectedZone.name} — Landslide Analysis
+              {selectedZone.name} — Flood Analysis
             </h1>
             {stats && (
               <span
                 className="ml-auto px-3 py-1 rounded-full text-sm font-semibold"
                 style={{
-                  backgroundColor: riskColor(stats.avgRisk) + "22",
-                  color: riskColor(stats.avgRisk),
-                  border: `1px solid ${riskColor(stats.avgRisk)}44`,
+                  backgroundColor: (stats.floodCount > stats.safeCount ? "hsl(0,85%,55%)" : "hsl(150,70%,45%)") + "22",
+                  color: stats.floodCount > stats.safeCount ? "hsl(0,85%,55%)" : "hsl(150,70%,45%)",
+                  border: `1px solid ${stats.floodCount > stats.safeCount ? "hsl(0,85%,55%)" : "hsl(150,70%,45%)"}44`,
                 }}
               >
-                {riskLabel(stats.avgRisk)} Risk — {stats.avgRisk.toFixed(1)}%
+                {stats.floodCount}/{data.length} Flood Predicted
               </span>
             )}
             {previewImages.length > 0 && (
               <DatasetPreview
-                basePath={`/data/landslide/${selectedZone.folder}/images`}
+                basePath={`/data/flood/${selectedZone.folder}/images`}
                 images={previewImages}
                 title={`${selectedZone.name} — Dataset Images`}
               />
@@ -241,17 +227,16 @@ const LandslidePrediction = () => {
             </motion.div>
           ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-              {/* Stats Cards */}
+              {/* Stats */}
               {stats && (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                   {[
-                    { icon: AlertTriangle, label: "Avg Risk", value: `${stats.avgRisk.toFixed(1)}%`, color: riskColor(stats.avgRisk) },
-                    { icon: Droplets, label: "Soil Moisture", value: stats.avgSoilMoisture.toFixed(2), color: "hsl(var(--primary))" },
-                    { icon: Mountain, label: "Slope", value: `${stats.avgSlope.toFixed(1)}°`, color: "hsl(var(--primary))" },
-                    { icon: Layers, label: "Soil Score", value: stats.avgSoilScore.toFixed(1), color: "hsl(var(--primary))" },
-                    { icon: MapPin, label: "River Dist", value: `${stats.avgRiverDist.toFixed(2)} km`, color: "hsl(var(--primary))" },
-                    { icon: TreePine, label: "Vegetation", value: (stats.avgVegetation * 100).toFixed(2) + "%", color: "hsl(150, 70%, 45%)" },
-                    { icon: Activity, label: "Crack Index", value: stats.avgCrack.toFixed(3), color: "hsl(35, 90%, 55%)" },
+                    { icon: TrendingUp, label: "Flood Cases", value: `${stats.floodCount}/${data.length}`, color: "hsl(0, 85%, 55%)" },
+                    { icon: Ruler, label: "Avg Elevation", value: `${stats.avgElevation.toFixed(0)}m`, color: "hsl(var(--primary))" },
+                    { icon: Waves, label: "River Dist", value: `${stats.avgRiverDist.toFixed(1)} km`, color: "hsl(var(--primary))" },
+                    { icon: Droplets, label: "Soil Moisture", value: `${stats.avgSoilMoisture.toFixed(0)}%`, color: "hsl(var(--primary))" },
+                    { icon: Activity, label: "Water Spread", value: stats.avgWaterSpread.toFixed(1), color: "hsl(35, 90%, 55%)" },
+                    { icon: MapPin, label: "Coordinates", value: `${mapCenter[0].toFixed(2)}, ${mapCenter[1].toFixed(2)}`, color: "hsl(var(--primary))" },
                   ].map((stat, i) => (
                     <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
@@ -266,12 +251,12 @@ const LandslidePrediction = () => {
                 </div>
               )}
 
-              {/* Map + Rainfall Chart */}
+              {/* Map + Rainfall */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-orbitron flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" /> Zone Map — Risk Overlay
+                      <MapPin className="h-4 w-4 text-primary" /> Zone Map — Terrain View
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
@@ -281,7 +266,7 @@ const LandslidePrediction = () => {
                         title="Zone Map"
                         width="100%" height="100%"
                         style={{ border: 0, borderRadius: "0 0 8px 8px" }}
-                        src={`https://maps.google.com/maps?q=${mapCenter[0]},${mapCenter[1]}&t=p&z=14&output=embed`}
+                        src={`https://maps.google.com/maps?q=${mapCenter[0]},${mapCenter[1]}&t=p&z=13&output=embed`}
                         loading="lazy" allowFullScreen
                       />
                       <div className="absolute bottom-2 left-2 bg-card/80 backdrop-blur-sm rounded px-2 py-1 text-xs text-muted-foreground">
@@ -317,7 +302,7 @@ const LandslidePrediction = () => {
                             {rainfallData.map((entry, index) => (
                               <Cell
                                 key={`cell-${index}`}
-                                fill={entry.rainfall > 85 ? "hsl(0, 85%, 55%)" : entry.rainfall > 75 ? "hsl(35, 90%, 55%)" : "hsl(var(--primary))"}
+                                fill={entry.rainfall > 60 ? "hsl(0, 85%, 55%)" : entry.rainfall > 30 ? "hsl(35, 90%, 55%)" : "hsl(var(--primary))"}
                               />
                             ))}
                           </Bar>
@@ -327,6 +312,55 @@ const LandslidePrediction = () => {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Data Table */}
+              <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-orbitron flex items-center gap-2">
+                    <Database className="h-4 w-4 text-primary" /> Prediction Data ({data.length} samples)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="max-h-[400px] overflow-auto rounded-lg border border-border/50">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-border/50">
+                          <TableHead>Lat</TableHead>
+                          <TableHead>Long</TableHead>
+                          <TableHead>Elevation</TableHead>
+                          <TableHead>River Dist</TableHead>
+                          <TableHead>Soil Moisture</TableHead>
+                          <TableHead>River Trend</TableHead>
+                          <TableHead>Prediction</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.map((row, i) => (
+                          <TableRow key={i} className="border-border/30">
+                            <TableCell className="text-xs">{row.lat}</TableCell>
+                            <TableCell className="text-xs">{row.long}</TableCell>
+                            <TableCell className="text-xs">{row.elevation}m</TableCell>
+                            <TableCell className="text-xs">{row.distance_from_river} km</TableCell>
+                            <TableCell className="text-xs">{row.soil_moisture}%</TableCell>
+                            <TableCell className="text-xs capitalize">{row.river_trend}</TableCell>
+                            <TableCell>
+                              <span
+                                className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                                style={{
+                                  backgroundColor: floodColor(row.flood_next_day) + "22",
+                                  color: floodColor(row.flood_next_day),
+                                }}
+                              >
+                                {floodLabel(row.flood_next_day)}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           )}
         </AnimatePresence>
@@ -335,4 +369,4 @@ const LandslidePrediction = () => {
   );
 };
 
-export default LandslidePrediction;
+export default FloodPrediction;
