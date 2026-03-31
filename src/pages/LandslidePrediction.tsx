@@ -93,8 +93,13 @@ const LandslidePrediction = () => {
     setLoading(true);
     try {
       const res = await fetch(
-        `/data/landslide/${encodeURIComponent(zone.folder)}/predictions.csv`
+        `/data/landslide/${zone.folder}/predictions.csv`
       );
+      if (!res.ok) {
+        console.error("Failed to fetch predictions CSV:", res.status);
+        setLoading(false);
+        return;
+      }
       const text = await res.text();
       const parsed = Papa.parse<PredictionRow>(text, {
         header: true,
@@ -102,7 +107,11 @@ const LandslidePrediction = () => {
         skipEmptyLines: true,
       });
       const validData = parsed.data.filter(
-        (r) => r.risk_percent != null && r.lat != null && r.lon != null
+        (r) =>
+          r.risk_percent != null &&
+          Number.isFinite(Number(r.risk_percent)) &&
+          r.lat != null &&
+          r.lon != null
       );
       setData(validData);
       setSelectedZone(zone);
