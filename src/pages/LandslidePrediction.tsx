@@ -101,7 +101,10 @@ const LandslidePrediction = () => {
         dynamicTyping: true,
         skipEmptyLines: true,
       });
-      setData(parsed.data);
+      const validData = parsed.data.filter(
+        (r) => r.risk_percent != null && r.lat != null && r.lon != null
+      );
+      setData(validData);
       setSelectedZone(zone);
     } catch (e) {
       console.error("Failed to load zone data", e);
@@ -112,7 +115,7 @@ const LandslidePrediction = () => {
   const stats = useMemo(() => {
     if (!data.length) return null;
     const avg = (key: keyof PredictionRow) =>
-      data.reduce((s, r) => s + Number(r[key]), 0) / data.length;
+      data.reduce((s, r) => s + (Number(r[key]) || 0), 0) / data.length;
     return {
       avgRisk: avg("risk_percent"),
       avgSoilMoisture: avg("soil_moisture"),
