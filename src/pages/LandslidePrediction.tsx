@@ -311,6 +311,7 @@ const LandslidePrediction = () => {
                               borderRadius: "8px",
                               color: "hsl(var(--foreground))",
                             }}
+                            itemStyle={{ color: "#fff" }}
                             formatter={(value: number) => [`${value.toFixed(1)} mm`, "Rainfall"]}
                           />
                           <Bar dataKey="rainfall" radius={[4, 4, 0, 0]}>
