@@ -1,15 +1,8 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, ScanEye, Mountain, Waves } from "lucide-react";
+import { ArrowLeft, ScanEye, Mountain, Waves, Navigation } from "lucide-react";
 
 const modules = [
-  {
-    title: "Crowd Monitoring",
-    description: "Detect crowd density, movement patterns, and anomalous gatherings using aerial drone feeds.",
-    icon: Users,
-    route: "/simulation/crowd-monitoring",
-    status: "Ready",
-  },
   {
     title: "Human Detection",
     description: "Identify and track individuals in disaster zones, search-and-rescue operations, and restricted areas.",
@@ -29,6 +22,13 @@ const modules = [
     description: "Monitor water levels, rainfall data, and river flow to forecast flood events in real-time.",
     icon: Waves,
     route: "/simulation/flood-prediction",
+    status: "Ready",
+  },
+  {
+    title: "Rescue Path Optimizer",
+    description: "Mission-ready navigation for extreme terrain. Combines real-world road data with zero-tolerance AI safety bypass for high-stakes extractions.",
+    icon: Navigation,
+    route: "/simulation/rescue-optimizer",
     status: "Ready",
   },
 ];

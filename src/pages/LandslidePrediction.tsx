@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
 import DatasetPreview from "@/components/DatasetPreview";
 
@@ -323,6 +324,41 @@ const LandslidePrediction = () => {
                             ))}
                           </Bar>
                         </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-orbitron flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-primary" /> Risk Factor Analysis
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
+                          { subject: 'Slope', A: stats ? (stats.avgSlope / 45) * 100 : 0 },
+                          { subject: 'Moisture', A: stats ? stats.avgSoilMoisture : 0 },
+                          { subject: 'Soil Score', A: stats ? stats.avgSoilScore * 100 : 0 },
+                          { subject: 'Vegetation', A: stats ? (1 - stats.avgVegetation) * 100 : 0 },
+                          { subject: 'Crack Index', A: stats ? stats.avgCrack * 1000 : 0 },
+                          { subject: 'River Dist', A: stats ? (1 / (stats.avgRiverDist + 1)) * 100 : 0 },
+                        ]}>
+                          <PolarGrid stroke="hsl(var(--border))" />
+                          <PolarAngleAxis dataKey="subject" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                          <Radar
+                            name="Risk Factors"
+                            dataKey="A"
+                            stroke="hsl(var(--primary))"
+                            fill="hsl(var(--primary))"
+                            fillOpacity={0.5}
+                          />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }}
+                            itemStyle={{ color: '#fff' }}
+                          />
+                        </RadarChart>
                       </ResponsiveContainer>
                     </div>
                   </CardContent>

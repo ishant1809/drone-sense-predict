@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Construction } from "lucide-react";
 
 const titles: Record<string, string> = {
-  "crowd-monitoring": "CROWD MONITORING",
   "human-detection": "HUMAN DETECTION",
   "landslide-prediction": "LANDSLIDE PREDICTION",
   "flood-prediction": "FLOOD PREDICTION",

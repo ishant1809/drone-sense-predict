@@ -10,6 +10,7 @@ import ModulePlaceholder from "./pages/ModulePlaceholder.tsx";
 import LandslidePrediction from "./pages/LandslidePrediction.tsx";
 import FloodPrediction from "./pages/FloodPrediction.tsx";
 import HumanDetection from "./pages/HumanDetection.tsx";
+import RescuePathOptimizer from "./pages/RescuePathOptimizer.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/simulation/landslide-prediction" element={<LandslidePrediction />} />
           <Route path="/simulation/flood-prediction" element={<FloodPrediction />} />
           <Route path="/simulation/human-detection" element={<HumanDetection />} />
+          <Route path="/simulation/rescue-optimizer" element={<RescuePathOptimizer />} />
           <Route path="/simulation/:module" element={<ModulePlaceholder />} />
           <Route path="/prototype" element={<Prototype />} />
           <Route path="*" element={<NotFound />} />

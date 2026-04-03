@@ -25,7 +25,7 @@ interface FloodRow {
   lat: number;
   long: number;
   elevation: number;
-  distance_from_river: number;
+  distance_from_river?: number;
   rain_day_1: number;
   rain_day_2: number;
   rain_day_3: number;
@@ -40,14 +40,26 @@ interface FloodRow {
   river_level_day_5: number;
   river_level_day_6: number;
   river_level_day_7: number;
-  river_trend: string;
+  river_trend?: string;
   soil_moisture: number;
-  water_spread_trend: number;
-  flood_next_day: number;
+  water_spread_trend?: number;
+  flood_next_day?: number;
+  flood_probability?: number;
 }
 
-const floodLabel = (v: number) => (v === 1 ? "Flood Likely" : "Safe");
-const floodColor = (v: number) => (v === 1 ? "hsl(0, 85%, 55%)" : "hsl(150, 70%, 45%)");
+const floodLabel = (row: FloodRow) => {
+  const p = row.flood_probability ?? (row.flood_next_day === 1 ? 0.95 : 0.05);
+  if (p > 0.75) return "Critical Risk";
+  if (p > 0.45) return "Moderate Risk";
+  return "Stable";
+};
+
+const floodColor = (row: FloodRow) => {
+  const p = row.flood_probability ?? (row.flood_next_day === 1 ? 0.95 : 0.05);
+  if (p > 0.75) return "hsl(0, 85%, 55%)";
+  if (p > 0.45) return "hsl(35, 90%, 55%)";
+  return "hsl(150, 70%, 45%)";
+};
 
 const FloodPrediction = () => {
   const navigate = useNavigate();
@@ -78,7 +90,7 @@ const FloodPrediction = () => {
           header: true, dynamicTyping: true, skipEmptyLines: true,
         });
         const valid = parsed.data.filter(
-          (r) => r.lat != null && r.long != null && r.flood_next_day != null
+          (r) => r.lat != null && r.long != null && (r.flood_probability != null || r.flood_next_day != null)
         );
         setData(valid);
       }
@@ -100,14 +112,20 @@ const FloodPrediction = () => {
     if (!data.length) return null;
     const avg = (key: keyof FloodRow) =>
       data.reduce((s, r) => s + (Number(r[key]) || 0), 0) / data.length;
-    const floodCount = data.filter((r) => r.flood_next_day === 1).length;
+    
+    // Check if probability column exists
+    const hasProb = data[0].flood_probability !== undefined;
+    const avgRisk = hasProb 
+      ? data.reduce((s, r) => s + (r.flood_probability || 0), 0) / data.length
+      : data.filter(r => r.flood_next_day === 1).length / data.length;
+
     return {
       avgElevation: avg("elevation"),
       avgRiverDist: avg("distance_from_river"),
-      avgSoilMoisture: avg("soil_moisture"),
+      avgSoilMoisture: avg("soil_moisture") < 1 ? avg("soil_moisture") * 100 : avg("soil_moisture"),
       avgWaterSpread: avg("water_spread_trend"),
-      floodCount,
-      safeCount: data.length - floodCount,
+      avgRisk,
+      sampleCount: data.length,
     };
   }, [data]);
 
@@ -116,13 +134,13 @@ const FloodPrediction = () => {
     const avg = (key: keyof FloodRow) =>
       data.reduce((s, r) => s + (Number(r[key]) || 0), 0) / data.length;
     return [
-      { day: "Day 1", rainfall: avg("rain_day_1") },
-      { day: "Day 2", rainfall: avg("rain_day_2") },
-      { day: "Day 3", rainfall: avg("rain_day_3") },
-      { day: "Day 4", rainfall: avg("rain_day_4") },
-      { day: "Day 5", rainfall: avg("rain_day_5") },
-      { day: "Day 6", rainfall: avg("rain_day_6") },
-      { day: "Day 7", rainfall: avg("rain_day_7") },
+      { day: "D-6", rainfall: avg("rain_day_1") },
+      { day: "D-5", rainfall: avg("rain_day_2") },
+      { day: "D-4", rainfall: avg("rain_day_3") },
+      { day: "D-3", rainfall: avg("rain_day_4") },
+      { day: "D-2", rainfall: avg("rain_day_5") },
+      { day: "D-1", rainfall: avg("rain_day_6") },
+      { day: "Today", rainfall: avg("rain_day_7") },
     ];
   }, [data]);
 
@@ -144,10 +162,10 @@ const FloodPrediction = () => {
             </Button>
             <div className="flex items-center gap-3 mb-2">
               <Waves className="h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-bold font-orbitron tracking-wider">Flood Prediction</h1>
+              <h1 className="text-3xl font-bold font-orbitron tracking-wider uppercase">Flood Prediction</h1>
             </div>
             <p className="text-muted-foreground max-w-2xl">
-              Select a zone dataset to analyze rainfall, river levels, and flood risk.
+              Select a zone dataset to analyze rainfall, river levels, and hydrological risk factors.
             </p>
           </motion.div>
 
@@ -164,13 +182,13 @@ const FloodPrediction = () => {
                         <Database className="h-6 w-6" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg font-orbitron">{zone.name}</CardTitle>
-                        <p className="text-xs text-muted-foreground mt-1">Flood prediction dataset</p>
+                        <CardTitle className="text-lg font-orbitron tracking-tight">{zone.name}</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1 uppercase tracking-tighter">Telemetric Dataset</p>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">Click to load flood analysis for this zone.</p>
+                    <p className="text-sm text-muted-foreground">Analyze real-time sensors and flood vulnerability.</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -189,32 +207,32 @@ const FloodPrediction = () => {
           <Button
             variant="ghost"
             onClick={() => { setSelectedZone(null); setData([]); setPreviewImages([]); }}
-            className="mb-3 text-muted-foreground hover:text-primary"
+            className="mb-3 text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Datasets
           </Button>
           <div className="flex items-center gap-3 flex-wrap">
             <Waves className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl font-bold font-orbitron tracking-wider">
-              {selectedZone.name} — Flood Analysis
+            <h1 className="text-2xl font-bold font-orbitron tracking-wider text-white">
+              {selectedZone.name} <span className="text-primary/50">DATASTREAM</span>
             </h1>
             {stats && (
               <span
-                className="ml-auto px-3 py-1 rounded-full text-sm font-semibold"
+                className="ml-auto px-4 py-1.5 rounded-full text-xs font-bold font-mono tracking-widest border uppercase"
                 style={{
-                  backgroundColor: (stats.floodCount > stats.safeCount ? "hsl(0,85%,55%)" : "hsl(150,70%,45%)") + "22",
-                  color: stats.floodCount > stats.safeCount ? "hsl(0,85%,55%)" : "hsl(150,70%,45%)",
-                  border: `1px solid ${stats.floodCount > stats.safeCount ? "hsl(0,85%,55%)" : "hsl(150,70%,45%)"}44`,
+                  backgroundColor: stats.avgRisk > 0.5 ? "hsl(0,85%,55%)22" : "hsl(150,70%,45%)22",
+                  color: stats.avgRisk > 0.5 ? "hsl(0,85%,55%)" : "hsl(150,70%,45%)",
+                  borderColor: stats.avgRisk > 0.5 ? "hsl(0,85%,55%)44" : "hsl(150,70%,45%)44",
                 }}
               >
-                {stats.floodCount}/{data.length} Flood Predicted
+                Risk Index: {(stats.avgRisk * 100).toFixed(1)}%
               </span>
             )}
             {previewImages.length > 0 && (
               <DatasetPreview
                 basePath={`/data/flood/${selectedZone.folder}/images`}
                 images={previewImages}
-                title={`${selectedZone.name} — Dataset Images`}
+                title={`${selectedZone.name} — Sensor Imagery`}
               />
             )}
           </div>
@@ -223,7 +241,7 @@ const FloodPrediction = () => {
         <AnimatePresence>
           {loading ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center py-20">
-              <div className="animate-pulse text-primary font-orbitron">Loading zone data...</div>
+              <div className="animate-pulse text-primary font-orbitron tracking-[0.2em] text-sm">SYNCHRONIZING SENSORS...</div>
             </motion.div>
           ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -231,18 +249,18 @@ const FloodPrediction = () => {
               {stats && (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                   {[
-                    { icon: TrendingUp, label: "Flood Cases", value: `${stats.floodCount}/${data.length}`, color: "hsl(0, 85%, 55%)" },
+                    { icon: TrendingUp, label: "Flood Chance", value: `${(stats.avgRisk * 100).toFixed(1)}%`, color: stats.avgRisk > 0.5 ? "hsl(0, 85%, 55%)" : "hsl(var(--primary))" },
                     { icon: Ruler, label: "Avg Elevation", value: `${stats.avgElevation.toFixed(0)}m`, color: "hsl(var(--primary))" },
-                    { icon: Waves, label: "River Dist", value: `${stats.avgRiverDist.toFixed(1)} km`, color: "hsl(var(--primary))" },
+                    { icon: Waves, label: "River Dist", value: stats.avgRiverDist ? `${stats.avgRiverDist.toFixed(1)} km` : "N/A", color: "hsl(var(--primary))" },
                     { icon: Droplets, label: "Soil Moisture", value: `${stats.avgSoilMoisture.toFixed(0)}%`, color: "hsl(var(--primary))" },
-                    { icon: Activity, label: "Water Spread", value: stats.avgWaterSpread.toFixed(1), color: "hsl(35, 90%, 55%)" },
-                    { icon: MapPin, label: "Coordinates", value: `${mapCenter[0].toFixed(2)}, ${mapCenter[1].toFixed(2)}`, color: "hsl(var(--primary))" },
+                    { icon: Activity, label: "Spread Index", value: stats.avgWaterSpread ? stats.avgWaterSpread.toFixed(1) : "STABLE", color: "hsl(35, 90%, 55%)" },
+                    { icon: MapPin, label: "GPS Center", value: `${mapCenter[0].toFixed(2)}, ${mapCenter[1].toFixed(2)}`, color: "hsl(var(--primary))" },
                   ].map((stat, i) => (
                     <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+                      <Card className="border-border/50 bg-card/40 backdrop-blur-sm shadow-xl">
                         <CardContent className="p-4 text-center">
-                          <stat.icon className="h-5 w-5 mx-auto mb-2" style={{ color: stat.color }} />
-                          <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+                          <stat.icon className="h-5 w-5 mx-auto mb-2 opacity-80" style={{ color: stat.color }} />
+                          <p className="text-[10px] text-muted-foreground mb-1 uppercase font-bold tracking-tighter">{stat.label}</p>
                           <p className="text-lg font-bold font-orbitron" style={{ color: stat.color }}>{stat.value}</p>
                         </CardContent>
                       </Card>
@@ -253,57 +271,59 @@ const FloodPrediction = () => {
 
               {/* Map + Rainfall */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-orbitron flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-primary" /> Zone Map — Terrain View
+                <Card className="border-border/50 bg-card/40 backdrop-blur-sm overflow-hidden shadow-2xl">
+                  <header className="px-6 pt-6 pb-2">
+                    <CardTitle className="text-xs font-orbitron tracking-widest text-primary flex items-center gap-2 uppercase">
+                      <MapPin className="h-4 w-4" /> Terrain Telemetry Scan
                     </CardTitle>
-                  </CardHeader>
+                  </header>
                   <CardContent className="p-0">
                     <div className="h-[350px] w-full relative">
                       <iframe
                         key={`${mapCenter[0]}-${mapCenter[1]}`}
                         title="Zone Map"
                         width="100%" height="100%"
-                        style={{ border: 0, borderRadius: "0 0 8px 8px" }}
-                        src={`https://maps.google.com/maps?q=${mapCenter[0]},${mapCenter[1]}&t=p&z=13&output=embed`}
+                        style={{ border: 0 }}
+                        src={`https://maps.google.com/maps?q=${mapCenter[0]},${mapCenter[1]}&t=k&z=14&output=embed`}
                         loading="lazy" allowFullScreen
                       />
-                      <div className="absolute bottom-2 left-2 bg-card/80 backdrop-blur-sm rounded px-2 py-1 text-xs text-muted-foreground">
-                        📍 {mapCenter[0].toFixed(4)}, {mapCenter[1].toFixed(4)}
+                      <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-md rounded px-3 py-1.5 border border-white/10 text-[10px] font-mono text-slate-300 tracking-tighter">
+                        POINT: {mapCenter[0].toFixed(4)}, {mapCenter[1].toFixed(4)} — SAT_ACTIVE
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-orbitron flex items-center gap-2">
-                      <Droplets className="h-4 w-4 text-primary" /> Rainfall — Last 7 Days (mm)
+                <Card className="border-border/50 bg-card/40 backdrop-blur-sm shadow-2xl">
+                   <header className="px-6 pt-6 pb-0">
+                    <CardTitle className="text-xs font-orbitron tracking-widest text-primary flex items-center gap-2 uppercase">
+                      <Droplets className="h-4 w-4" /> Weekly Precipitation Analysis (mm)
                     </CardTitle>
-                  </CardHeader>
+                  </header>
                   <CardContent>
-                    <div className="h-[300px]">
+                    <div className="h-[300px] pt-4">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={rainfallData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                          <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={10} axisLine={false} tickLine={false} />
+                          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} axisLine={false} tickLine={false} />
                           <Tooltip
                             contentStyle={{
                               backgroundColor: "hsl(var(--card))",
                               border: "1px solid hsl(var(--border))",
                               borderRadius: "8px",
                               color: "hsl(var(--foreground))",
+                              fontSize: "12px"
                             }}
-                            itemStyle={{ color: "#fff" }}
+                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                             formatter={(value: number) => [`${value.toFixed(1)} mm`, "Rainfall"]}
                           />
-                          <Bar dataKey="rainfall" radius={[4, 4, 0, 0]}>
+                          <Bar dataKey="rainfall" radius={[2, 2, 0, 0]} barSize={24}>
                             {rainfallData.map((entry, index) => (
                               <Cell
                                 key={`cell-${index}`}
                                 fill={entry.rainfall > 60 ? "hsl(0, 85%, 55%)" : entry.rainfall > 30 ? "hsl(35, 90%, 55%)" : "hsl(var(--primary))"}
+                                fillOpacity={0.8}
                               />
                             ))}
                           </Bar>
@@ -315,44 +335,43 @@ const FloodPrediction = () => {
               </div>
 
               {/* Data Table */}
-              <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-orbitron flex items-center gap-2">
-                    <Database className="h-4 w-4 text-primary" /> Prediction Data ({data.length} samples)
+              <Card className="border-border/50 bg-card/40 backdrop-blur-sm shadow-2xl">
+                <header className="px-6 pt-6 pb-2">
+                  <CardTitle className="text-xs font-orbitron tracking-widest text-primary flex items-center gap-2 uppercase">
+                    <Database className="h-4 w-4" /> Sensor Stream ({data.length} Nodes)
                   </CardTitle>
-                </CardHeader>
+                </header>
                 <CardContent>
-                  <div className="max-h-[400px] overflow-auto rounded-lg border border-border/50">
+                  <div className="max-h-[400px] overflow-auto rounded-lg border border-border/50 bg-black/20">
                     <Table>
-                      <TableHeader>
+                      <TableHeader className="bg-white/5 sticky top-0 z-10 backdrop-blur-md">
                         <TableRow className="border-border/50">
-                          <TableHead>Lat</TableHead>
-                          <TableHead>Long</TableHead>
-                          <TableHead>Elevation</TableHead>
-                          <TableHead>River Dist</TableHead>
-                          <TableHead>Soil Moisture</TableHead>
-                          <TableHead>River Trend</TableHead>
-                          <TableHead>Prediction</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest">Geolocation</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-center">Elevation</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-center">Moisture</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-center">Rain (24h)</TableHead>
+                          <TableHead className="text-[10px] font-bold uppercase tracking-widest text-center">Risk Analysis</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {data.map((row, i) => (
-                          <TableRow key={i} className="border-border/30">
-                            <TableCell className="text-xs">{row.lat}</TableCell>
-                            <TableCell className="text-xs">{row.long}</TableCell>
-                            <TableCell className="text-xs">{row.elevation}m</TableCell>
-                            <TableCell className="text-xs">{row.distance_from_river} km</TableCell>
-                            <TableCell className="text-xs">{row.soil_moisture}%</TableCell>
-                            <TableCell className="text-xs capitalize">{row.river_trend}</TableCell>
-                            <TableCell>
+                          <TableRow key={i} className="border-border/20 hover:bg-white/5 transition-colors">
+                            <TableCell className="text-[11px] font-mono opacity-70 tracking-tighter">{row.lat.toFixed(4)} / {row.long.toFixed(4)}</TableCell>
+                            <TableCell className="text-xs text-center font-mono">{row.elevation}m</TableCell>
+                            <TableCell className="text-xs text-center font-mono">{row.soil_moisture < 1 ? (row.soil_moisture * 100).toFixed(0) : row.soil_moisture}%</TableCell>
+                            <TableCell className="text-xs text-center font-mono">{row.rain_day_7.toFixed(1)}mm</TableCell>
+                            <TableCell className="text-center">
                               <span
-                                className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                                className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest"
                                 style={{
-                                  backgroundColor: floodColor(row.flood_next_day) + "22",
-                                  color: floodColor(row.flood_next_day),
+                                  backgroundColor: floodColor(row) + "22",
+                                  color: floodColor(row),
+                                  border: `1px solid ${floodColor(row)}44`,
                                 }}
                               >
-                                {floodLabel(row.flood_next_day)}
+                                {row.flood_probability !== undefined 
+                                  ? `${(row.flood_probability * 100).toFixed(0)}% ${floodLabel(row)}`
+                                  : floodLabel(row)}
                               </span>
                             </TableCell>
                           </TableRow>

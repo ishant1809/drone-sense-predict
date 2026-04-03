@@ -50,7 +50,7 @@ const Index = () => {
                 SIMULATION
               </h2>
               <p className="text-muted-foreground text-sm font-body leading-relaxed">
-                Run AI models on synthetic data. Test crowd monitoring, human detection, and disaster prediction modules.
+                Run AI models on synthetic data. Test human detection, landslide analysis, and flood prediction modules.
               </p>
               <div className="mt-5 flex items-center gap-2 text-primary text-xs font-display tracking-wider uppercase opacity-0 group-hover:opacity-100 transition-opacity">
                 <span>Enter Module</span>
