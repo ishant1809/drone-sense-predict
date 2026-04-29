@@ -1,7 +1,8 @@
 # AEGIS EYE (C2A Platform)
 ### *Advanced Disaster Management & Predictive Intelligence System*
 
-AEGIS EYE is a mission-critical platform designed for first responders and disaster management authorities. By fusing satellite intelligence, real-time drone telemetry, and predictive machine learning, the system provides a unified command-and-control interface for disaster mitigation, search-and-rescue (SAR), and geological risk assessment.
+## 📝 About
+**AEGIS EYE** is an end-to-end disaster intelligence platform designed to maximize the efficacy of search-and-rescue (SAR) missions. By combining real-time aerial computer vision with predictive geological modeling, the system provides a unified command-and-control interface that transforms raw drone telemetry into actionable life-saving intelligence.
 
 ---
 
