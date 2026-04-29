@@ -1,7 +1,7 @@
-# Drone-Sense-Predict (C2A Project)
+# AEGIS EYE (C2A Project)
 
 ## 📡 Platform Overview
-**Drone-Sense-Predict** is a comprehensive disaster management and response platform. It integrates satellite intelligence, drone-based computer vision, and predictive machine learning to provide first responders with a unified command and control interface for disaster mitigation and search-and-rescue.
+**AEGIS EYE** is a comprehensive disaster management and response platform. It integrates satellite intelligence, drone-based computer vision, and predictive machine learning to provide first responders with a unified command and control interface for disaster mitigation and search-and-rescue.
 
 ---
 
